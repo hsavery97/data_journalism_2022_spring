@@ -73,33 +73,48 @@ west_virginia_amount %>%
 ```
 
 **Q2** Some of the loans appear not to have been paid out - there is a column representing the amount of money that hasn't been disbursed to the applicant. Which servicing lenders have the most loans with undisbursed amounts greater than 0?
-**A2** [write your answer here]
+**A2** Davis Trust Company and Miners & Merchants Bank
 
 ```{r}
-west_virginia_amount <- west_virginia_ppp %>%
-mutate(
-  undisbursed_amount = case_when(
-    undisbursedamount < 0 ~ 'under_10k',
-    amount >= 10000 & amount < 50000 ~ '10k_50k',
+west_virginia_undisbursed<-west_virginia_ppp%>% 
+  filter(undisbursed_amount>0)
+
+west_virginia_undisbursed%>%
+  group_by(servicing_lender_name)%>%
+  summarise(total=n()
+           )
 
 ```
 
 **Q3** What are some potential reasons why a loan might not be paid out? What questions does that circumstance raise for you?
-**A3** [write your answer here]
-
+**A3** The loans could have been flagged for possible fraud. Seeing as almost all of the undisbursed loans are tied to one lender I would really want to look into their lending practices and who their primary clients are. It strikes me as odd that only one other lender has disbursed loans and they only have one. 
 
 **Q4** Which month in 2021 had the most loans approved?
-**A4** [write your answer here]
+**A4** March
 
 ```{r}
-# Write the code to produce your answer here
+
+west_virginia_ppp %>%
+  mutate(Month = floor_date(date_approved, "month")) %>%
+  group_by(Month) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total))
 
 ```
 
 **Q5** How many loans went to West Virginia applicants that listed the maximum number of jobs retained (500)? Which one had the earliest approved date?
-**A5** [write your answer here]
+**A5** 10, J. AUSTIN HEATING & COOLING, INC.
 
 ```{r}
-# Write the code to produce your answer here
+
+west_virginia_max_retained<-west_virginia_ppp%>% 
+  select(date_approved,jobs_retained,name)%>%
+  filter(jobs_retained==500)
+
+west_virginia_max_retained%>%
+group_by(name)
+
+           
+
 
 ```
