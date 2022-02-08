@@ -124,6 +124,7 @@ ppp_maryland_loans %>%
   group_by(project_county_name) %>%
   summarise(
     count_loans = n()
+    arrange(desc(total))
   )
 ```
 How many loans does Anne Arundel County have?  Put your answer in the space below.

@@ -34,5 +34,6 @@ library(tidyverse)
 ```
 
 
+Example of how to find result N/A:
 
-
+filter(is.na(forgiveness_date)) 
