@@ -88,6 +88,8 @@ Q2: Find the 5-digit ZIP code in West Virginia that had the highest total amount
 * Which number is bigger, the loan amount or the forgiveness amount? Can you explain the discrepancy?
 
 A2:
+The top zip code, 25301, represents Charleston, WV. JACKSON KELLY PLLC received the largest loan in that zip, for 5,068,472.00. Of that sum, 5,126,618.64 was forgiven. The forgiveness amount is larger, this is presumably accounting for the interest that would have been owed on the loan.
+
 
 ```{r}
 # Hint
@@ -97,7 +99,8 @@ A2:
 cleaned_wv_ppp_loans<-wv_ppp_loans %>%
  mutate(zip = str_sub(zip, start=1L, end=5L)) %>% 
 distinct() %>%
- group_by(zip) %>%
+select(zip,name, amount)%>%
+ group_by(zip, name) %>%
   summarise(
     count=n(),
     total_loans_amount=sum(amount)
@@ -105,16 +108,18 @@ distinct() %>%
     arrange(desc(count)
     )
 
-cleaned_25301_loans<-wv_ppp_loans %>%
-  filter(zip=='25301')
- group_by(name) %>%
+top_zip_loans<-wv_ppp_loans %>%
+ mutate(zip = str_sub(zip, start=1L, end=5L)) %>% 
+  filter(zip=='25301')%>% 
+distinct() %>%
+select(zip,name, amount, forgiveness_amount)%>%
+ group_by(zip, name, forgiveness_amount) %>%
   summarise(
     count=n(),
-       total_loans_amount=sum(amount)
+    total_loans_amount=sum(amount)
    ) %>%
     arrange(desc(count)
-    )
-
+    )      
   
 ```
 
