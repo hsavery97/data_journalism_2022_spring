@@ -144,12 +144,22 @@ Some hints to help you answer this question:
 * When you examine the disclosure forms, there may be lots of stock sales and retirement accounts mixed in.  Ignore those. In the table in the disclosure forms, look for "Partnership" or "C-Corp" in the column named "Income Type"
 * This is a link to details on passage of the [CARES ACT](https://www.congress.gov/bill/116th-congress/house-bill/748). You can find a link to how the House voted by clicking on a link from [this page](https://www.congress.gov/bill/116th-congress/house-bill/748/actions).
 
-A3:
+A3:The businesses are DM MOTOR, INC, DUTCH MILLER OF CHARLESTON, INC, DUTCH MILLER OF CHARLOTTE, INC, DUTCH MILLER SUBARU, INC, DUTCH MILLER CHEVROLET, INC.They are presumably all car dealerships. In total, they received 3,105,300.	101.13% of those loans have been forgiven. Carol Miller (R-WV) voted yea. No color, just some reds and blues. 
 
 ```{r}
 
 # Hint
 # First, create a dataframe that only has loans to those five companies
 # Second, use that newly created dataframe to calculate total loan amount and percentage forgiven for those companies
+
+corruption_wv_ppp<-wv_ppp_loans %>%
+  filter(
+ str_detect(name,"^DUTCH M|^DM "))
+
+corruption_wv_ppp%>%
+ summarise(total_amount = sum(amount), total_fogiveness = sum(forgiveness_amount))%>%
+  mutate(percent_forgiven = (total_fogiveness/total_amount)*100)
+  
+  
 
 ```
