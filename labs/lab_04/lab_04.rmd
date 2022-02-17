@@ -137,7 +137,7 @@ maryland_ppp_with_naics_and_zcta %>%
   filter(race == 'Asian')%>%
 group_by(zip, PNHA)%>%
   summarise(
-    count=n())%>%
+    count=n(), sum(amount))%>%
     arrange(desc(count)
     )
 
