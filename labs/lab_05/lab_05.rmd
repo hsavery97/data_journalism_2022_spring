@@ -28,7 +28,9 @@ You'll need to load two packages for this: the tidyverse and janitor.
 ```{r}
 # Turn off scientific notation
 options(scipen=999)
-
+library(tidyverse)
+library(lubridate)
+library(refinr)
 ```
 
 ## Load Data
@@ -42,7 +44,16 @@ You'll need to load three data sets for this:
 All three data sets are in the data folder.  Write code to load the three in the codeblock below.
 
 **Task** Create a codeblock below this task, then read the data sets in in and assign them to appropriate variable names. There's a fourth data set you'll use in this lab, too, of selected loans in ZIP Code 25401. But there's no need to load it now.
+```{r}
 
+lab_05 <- read_rds("data/lab_05.rds")
+
+wv_population_county <- read_csv("data/wv_population_county.csv")
+
+naics_codes <- read_csv("data/naics_codes.csv")
+
+
+```
 ## Answer questions
 
 **Q1.** In the data folder, there is a csv called zip_25401_loan_sample.csv.  It contains a sample of loans from West Virginia ZIP Code 25401.
@@ -64,8 +75,20 @@ Then answer these questions:
 
 **A1.**
 
-```{r}
+126 E. Burke St,  36 loans, businesses: DREW HOLDINGS LLC, BRIX27, LLC, ABRAHAM ASHTON, HUB CO-OP LLC, RONIN PROPERTIES LLC
 
+```{r}
+clean_zip <- read_csv("data/clean_zip.csv")
+
+clean_zip %>%
+group_by(address)%>%
+   summarise(
+    count=n(),name
+   )%>%
+    arrange(desc(count))
+   
+    
+    
 ```
 
 **Q2.** Do some web research on the businesses that answered question 1.  
@@ -76,6 +99,8 @@ Based on your research, does it seem suspicious that this collection of business
 
 **A2.**
 
+They're all real estate businesses organized by the same two people. It isn't necessarily nefarious, but it is a lot of businesses for one address to be hosting. It's not impossible, it's just a little odd.Hub-co-op is for example a We-work like business, which is legitimate and would be hurt by the pandemic. 
+
 **Q3.** Start by using the West Virginia slice of the PPP loan data that you loaded at the start of the lab to create a subset of PPP loans in West Virginia's second largest county (which you can find in wv_population_county). And then use that table you created to answer the following questions:
 
 * Which city in that county had the highest number of loans?
@@ -85,20 +110,51 @@ Requirement: you MUST export a dataframe of PPP loans from R Studio at some poin
 
 ```{r}
 # write_csv accepts 2 arguments: the dataframe and the path to the file you write out
-write_csv(wv_population_county, "data\wv_population_county.csv")
+#write_csv(wv_population_county, "data\wv_population_county.csv")
+
+
 ```
 
 Guidance: there are a lot of steps you'll need to take to answer this question. You may find it helpful to write out in English what you plan to do step-by-step before you start writing code.   
 
 **A3.**
 
+Martinsburg had the most loans = 1165, Full service restaurants had the most loans
+
 ```{r}
 
+ Berkeley_info<- lab_05%>%
+  filter(project_county_name=="BERKELEY")
+
+write_csv(Berkeley_info, "data/Berkeley_info.csv")
+
+Berkeley_info_clean <- read_csv("data/Berkeley_info_clean.csv")
+
+Berkeley_info_clean%>%
+  group_by(city)%>%
+   summarise(
+    count=n()
+   )%>%
+    arrange(desc(count))
+   
+Berkeley_info_w_naics<- Berkeley_info_clean %>% 
+  left_join(naics_codes, by="naics_code") %>%  
+mutate(zip5 = str_sub(zip, 1, 5))
+
+Berkeley_info_w_naics%>%
+  filter(city=="Martinsburg")%>%
+  group_by(title)%>%
+summarise(
+    count=n()
+   )%>%
+arrange(desc(count))
 ```
 
 **Q4.** What are your two best hypotheses, which you'd need to confirm with reporting and further analysis, that explain why that industry is at the top of the list?
 
 **A4.**
+Full service restaurants took a major hit early in the pandemic when there were major restrictions on eating indoors. Martinsburg is also a major hub for NASCAR, which presumably was not oeprating early in the pandemic. 
+
 
 **Q5.** Start with a dataframe of loans to all businesses in the city and industry that answered question 3. Answer the following questions:
 * What is the name of the business that got the highest approved loan amount?
