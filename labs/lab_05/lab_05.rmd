@@ -167,4 +167,19 @@ Full service restaurants took a major hit early in the pandemic when there were 
 
 Hint: you will not find the answers to the last three questions in the data.  You could call them directly to get that information, but I don't want you to do that for this assignment.  Instead, do some web research. I would start by Googling the company name from the data and looking at the page that comes up for the business from at http://apps.sos.wv.gov/. I would use information I found on that page and use info about the company from Google, the [Wayback machine](https://archive.org/web/) (which lets you look at older versions of a company's website), Yelp, and Facebook.
 
+```{r}
+
+martinsburg_mania <- Berkeley_info_w_naics%>%
+  filter(city == "Martinsburg", title == "Full-Service Restaurants")
+  
+  
+martinsburg_mania %>%
+group_by(name)%>%
+  arrange(desc(amount))
+
+```
 **A5.**
+
+COTTLE CHRISTI L LLC received the largest loan amount, $280,434.00. The loan was approved 2021-02-17. The business reports 94 jobs retained. COTTLE CHRISTI L LLC is better known as KITZIE'S CAFE, though it operates under different names as well, including KITZIE'S RESTUARANT & LOUNGE and RIVERBEND BAR & GRILL. The company currently operates 5 locations, Kitzie's of Inwood seems to have closed. According to the WV Secretary of State, this location became defunct May 19, 2020, which is 9 months before the PPP loan was approved. 
+
+Source: https://apps.sos.wv.gov/business/corporations/organization.aspx?org=338507
