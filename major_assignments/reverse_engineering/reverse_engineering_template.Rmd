@@ -25,7 +25,10 @@ In this notebook, we are reverse engineering the story, [STORY NAME](STORY URL)
 Loading required libraries for this analysis.
 
 ```{r echo=FALSE, message=FALSE}
+options(scipen=999)
 
+# Load the tidyverse.
+library(tidyverse)
 ```
 
 ## Load and Cleaning Data
@@ -39,6 +42,9 @@ In this section, describe the source of the data, write a basic data dictionary 
 
 # Clean required data and prepare for analysis if needed. 
 
+fatal_police_shootings <-read_csv("fatal-police-shootings-data.csv")
+
+fatal_police_shootings_clean <- read_csv("fatal-police-shootings-data-clean.csv")
 
 ```
 
@@ -47,25 +53,32 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 1
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "Of men killed, 57 percent were armed with a gun and of women, 44 percent. In other cases, women were armed with knives, cars, toy weapons, hammers and hatchets."
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
+fatal_police_shootings_clean%>%
+group_by(armed)%>%
+  summarise(
+    count=n())
 
 ```
 
 ### Sentence 2
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
+* **Sentence text**: “Since 2015, police have killed 26 unarmed women, including Taylor. Of those, 14 were White, seven were Black, four were Hispanic and one’s race was unknown. While about twice as many White women were shot and killed as Black women, White women account for five times the Black female population.” 
+* **Analysis summary**: We've managed to replicate the Post's findings almost. However, we have different totals for white, Hispanic, and other races than they did. We get closer if we filter by age, but that inst still exact. We don't know what age they were defining as making someone a woman.
 ```{r}
 # Put code to reverse engineer sentence here
 
 # Display results of code below this codeblock
+
+fatal_police_shootings%>%
+  filter(armed == "unarmed", gender=="F", age >17)%>%
+  group_by(armed, gender, race)%>%
+  summarise(
+    count=n()
+    )
 
 ```
 
