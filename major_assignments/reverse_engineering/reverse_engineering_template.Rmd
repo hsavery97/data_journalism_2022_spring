@@ -54,7 +54,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 ### Sentence 1
 
 * **Sentence text**: "Of men killed, 57 percent were armed with a gun and of women, 44 percent. In other cases, women were armed with knives, cars, toy weapons, hammers and hatchets."
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: Stuck with how to calculate these percentages. Moved on to number 2.
 
 ```{r}
 fatal_police_shootings_clean%>%
