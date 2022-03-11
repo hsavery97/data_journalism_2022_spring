@@ -59,28 +59,25 @@ We used open refine to clean up the gun column and get all of the incidents with
 ```{r}
 
 
-# create dataframe of all shootings by gender
+
 
 all_police_shootings_by_gender <- fatal_police_shootings_clean%>%
   group_by(gender) %>%
   summarise(count=n()) %>%
   arrange(desc(count))
 
-# create separate dataframes for each gender
 all_shootings_men <- all_police_shootings_by_gender %>% 
   filter(gender == 'M')
 
 all_shootings_women <- all_police_shootings_by_gender %>% 
   filter(gender == 'F')
 
-# create dataframe of all shootings by gender where victim has gun
 gun_police_shootings_by_gender <- fatal_police_shootings_clean %>%
   filter(armed_clean == "gun") %>%
   group_by(gender) %>%
   summarise(count=n()) %>%
   arrange(desc(count))
   
-# create separate dataframes for each gender
 
 all_shootings_men_with_gun <- gun_police_shootings_by_gender %>% 
   filter(gender == 'M')
