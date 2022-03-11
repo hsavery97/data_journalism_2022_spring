@@ -54,13 +54,45 @@ In this notebook, we are reverse engineering five sentences from the story.
 ### Sentence 1
 
 * **Sentence text**: "Of men killed, 57 percent were armed with a gun and of women, 44 percent. In other cases, women were armed with knives, cars, toy weapons, hammers and hatchets."
-* **Analysis summary**: Stuck with how to calculate these percentages. Moved on to number 2.
-
+* **Analysis summary**: 
+We used open refine to clean up the gun column and get all of the incidents with guns. We then created separate data frames for each gender with incidents involving a gun. Then we calculated the percentages. Our results were not identical to the Post's and this may have had to do with them calculating it at a different time, but our results are close.
 ```{r}
-fatal_police_shootings_clean%>%
-group_by(armed)%>%
-  summarise(
-    count=n())
+
+
+# create dataframe of all shootings by gender
+
+all_police_shootings_by_gender <- fatal_police_shootings_clean%>%
+  group_by(gender) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+
+# create separate dataframes for each gender
+all_shootings_men <- all_police_shootings_by_gender %>% 
+  filter(gender == 'M')
+
+all_shootings_women <- all_police_shootings_by_gender %>% 
+  filter(gender == 'F')
+
+# create dataframe of all shootings by gender where victim has gun
+gun_police_shootings_by_gender <- fatal_police_shootings_clean %>%
+  filter(armed_clean == "gun") %>%
+  group_by(gender) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+  
+# create separate dataframes for each gender
+
+all_shootings_men_with_gun <- gun_police_shootings_by_gender %>% 
+  filter(gender == 'M')
+
+all_shootings_women_with_gun <- gun_police_shootings_by_gender %>% 
+  filter(gender == 'F')
+
+men_with_gun_percentage <- ((4012/6814)*100)
+women_with_gun_percentage <- ((145/320)*100)
+
+men_with_gun_percentage
+women_with_gun_percentage
 
 ```
 
@@ -73,7 +105,7 @@ group_by(armed)%>%
 
 # Display results of code below this codeblock
 
-fatal_police_shootings%>%
+shootings_women_race<-fatal_police_shootings%>%
   filter(armed == "unarmed", gender=="F", age >17)%>%
   group_by(armed, gender, race)%>%
   summarise(
@@ -84,14 +116,33 @@ fatal_police_shootings%>%
 
 ### Sentence 3
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "Since 2015, Black women have accounted for less than 1 percent of the overall fatal shootings in cases where race was known. "
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
+
+We removed all of the N/A results from race. Then we filtered by race and gender and sumarrized to get the total of black women shot by police which is 54. Then we calculated the total shot which is 5941. We got 0.9% which replicates the Post's <1%.It is possible our result is higher if it has been changed since the initial result, but it's still in the given range.
 ```{r}
 # Put code to reverse engineer sentence here
 
 # Display results of code below this codeblock
 
+
+shootings_race_known<-fatal_police_shootings%>%
+ drop_na(race)
+
+  shootings_black_women<-shootings_race_known%>%
+  filter(gender == 'F', race == 'B' )%>%
+  summarise(
+    count=n()
+    )
+  
+shootings_race_known%>%
+   summarise(
+    count=n()
+    )
+
+percent_black_women<- 
+  ((54/5941)*100)
 ```
 
 ### Sentence 4
