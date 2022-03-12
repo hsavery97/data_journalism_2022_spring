@@ -90,20 +90,21 @@ The DOJ may not be done investigating all cases. There is also a level of discre
 Q7. Which state had the most approved PPP loans per 100,000 population? [This web page](https://dwillis.github.io/jour472files/ppp_scraping_example/index.html) has links to 52 individual web pages, one for each state (plus Washington, D.C. and Puerto Rico). Each of those web pages contains a one-row html table that has the name of the state, the number of approved loans, and the 2019 population. Here's an example for [Alabama](https://dwillis.github.io/jour472files/ppp_scraping_example/states/alabama.html). You'll need to loop over the individual state urls, scrape each individual page and combine the information on each page into a single dataframe to answer this question. Don't forget to calculation the loans per 100,000.
 A7.
 
-Wyoming which had 25,814 loans for 581,024 inhabitants. 
+South Dakota which had 7379.531	loans per 100,000
 ```{r}
 big_data<-"https://dwillis.github.io/jour472files/ppp_scraping_example/index.html"
 big_data_table<-big_data%>%
 read_html()%>%
 html_table()
 
-big_data_table_dataframe<-big_data_table [[1]]
+big_data_table<-big_data_table [[1]]
 
 every_state_ppp<-tibble()
 
-for(row_number in 1:nrow(big_data_table_dataframe)){
-  each_row_df<-big_data_table_dataframe%>%
-    slice(row_number)
+for(row_number in 1:nrow(big_data_table)){
+  each_row_df<-big_data_table%>%
+   slice(row_number)
+
   
   url<-each_row_df$url
   
@@ -111,13 +112,19 @@ for(row_number in 1:nrow(big_data_table_dataframe)){
     read_html()%>%
     html_table()
   
-  specific_state_dataframe<-specific_state[[1]]
+  specific_state<-specific_state[[1]]
+  
   every_state_ppp<-every_state_ppp%>%
-  bind_rows(specific_state_dataframe)%>%
-    mutate(loans_per_hundred_thousand = (total_ppp_loans/population)*100)%>%
-    arrange(
-      desc(loans_per_hundred_thousand)
-    )
+  bind_rows(specific_state)
+    
 }
-   
+    
+    every_state_math<-every_state_ppp%>%
+    
+    mutate(per_population = (total_ppp_loans/population)*100000)%>%
+    arrange(
+      desc(per_population)
+    )
+
+every_state_math
 ```
