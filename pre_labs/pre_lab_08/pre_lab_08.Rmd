@@ -104,7 +104,7 @@ And now we calculate the percent change.
 **Task** Run the following codeblock to calculate the percentage change and put the state with the largest percentage growth below.
 **Answer**
 
-
+Nevada
 ```{r}
 alldata %>% mutate(change = ((Population2010-Population2000)/Population2000)*100) %>% arrange(desc(change))
 ```
@@ -128,6 +128,7 @@ We can measure this by median household income. That variable is `B19013_001`, s
 
 **Task** Run the following codeblock to find the Maryland county with the highest median household income and put the answer below.
 **Answer**
+Howard
 
 ```{r}
 md <- get_acs(geography = "county",
@@ -163,8 +164,11 @@ As you can see, some of the error bars are quite wide. Some are narrow. But if t
 Is the difference between Calvert and Montgomery significant?
 **Answer**
 
+No, the margins of error overlap.
+
 Is the difference between Howard and everyone else significant?
 **Answer**
+Yes, Howard is far and away the top county.
 
 ### Task 7: Joining Multiple Years Together
 
@@ -190,7 +194,7 @@ What we're going to do next is a lot, but each step is simple. We're going to jo
 
 **Task** Run the following codeblock to join the data, rename the population estimates and then calculate the values we need. Notice how we select _after_ we do the initial calculations so we only see the columns we're interested in (and drop the ones we don't want to see). Also note how the select function has the minus sign (-) in front of some columns? That means we don't want to see them in our result. Which counties saw their median incomes fall from 2010-2019? Is the change outside the margin of error for both?
 **Answer**
-
+Somerset and Caroline, significant for Somerset not for Caroline.
 ```{r}
 md10 %>%
   inner_join(md19, by=c("GEOID", "NAME")) %>%
