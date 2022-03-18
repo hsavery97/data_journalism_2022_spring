@@ -119,18 +119,37 @@ Prince George's and Montgomery are some of the most populated counties in the st
 
 **Q5** Which 5-digit zip code had the most removed PPP applications, and what is the percentage of Black population in that zip code according to the ACS? To answer this question, you will need to create separate dataframes with ACS data on total population by zip code and Black population by zip code. In each dataframe, rename the `estimate` column and remove the `variable` column. You'll need to combine the two dataframes in order to calculate the percentage, and then you can combine it with the PPP data. Remember: the PPP data may not have only 5-digit zip codes!
 **A5**
+60620, a zip code in Chicago which is about 96% black. 
 
 ```{r}
-total_pop_by_zip <- get_acs(geography = "zcta", variables = c(pop = "B01003_001"), year = 2019)
-black_pop_by_zip<-get_acs(geography = "zcta", variables = c(blackpop =  "B01003_001"), year = 2019)
+total_pop_by_zip <- get_acs(geography = "zcta", variables = c(pop = "B02001_001"), year = 2019)
+black_pop_by_zip<-get_acs(geography = "zcta", variables = c(blackpop =  "B02001_003"), year = 2019)
 
 percentage_black_pop<-total_pop_by_zip%>%
-  inner_join(total_black_)
+  inner_join(black_pop_by_zip, by=c("GEOID","NAME"))%>%
+  rename(estimate_total_pop_by_zip=estimate.x, estimate_black_pop_by_zip=estimate.y)%>%
+  mutate(percentage_pop = ((estimate_black_pop_by_zip/estimate_total_pop_by_zip)*100))%>%
+  arrange(desc(percentage_pop))
+  
+ppp_loan_applications <- lab_08_data%>%
+  mutate(zip5 = str_sub(zip, 1, 5))
+
+top_zips<-ppp_loan_applications%>%
+  group_by(zip5)%>%
+  summarise(total=n())%>%
+  arrange(desc(total))
+
+removed_by_zip<-top_zips%>%
+  left_join(percentage_black_pop, by=c("zip5"="GEOID"))%>%
+  arrange(desc(total))
 
 ```
 
 **Q6** How would you describe to an editor the top 10 zip codes with the most removed applications in terms of Black population? Where are they located, and what do they have in common? Are there any zip codes that seem different, and if so why?
 **A6**
 
+All but the second result are located on either the South or West Side of Chicago. The zip with the second most removed loans is in Atlanta, GA. Almost all of the zips have a population that is well over 50% black. A notable exception is zip 60623 on the West Side of Chicago which is only about 30% black. 
+
 **Q7** What other columns from the PPP data could be useful in reporting on what happened to these removed loans?
 **A7**
+I would also like to pull the data for hispanic applicants to see how they compare. It would be helpful to see the information for when these loan applications were made too. Was this early in the pandemic or later? If there were data on median housefold income and percent with a high school diploma for the zips that would be good too. 
