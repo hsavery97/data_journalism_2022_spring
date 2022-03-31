@@ -17,6 +17,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 **Task** Create a codeblock and load appropriate packages and settings for this lab.
 
+```{r}
+options(scipen=999)
+library(tidyverse)
+library(tidycensus)
+census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
+```
+
 ## Questions
 
 **Q1.** Which day in April 2020 saw the most loans approved in West Virginia? 
@@ -33,8 +40,42 @@ Basically, your chart should look like this image, which will appear when you ru
 
 ```{r}
 knitr::include_graphics(rep("images/chart_1.png"))
+
 ```
+````{r}
+wv_ppp_loan_data <- read_rds("data/lab_09.rds")
+
+ppp_wv_loans_April <- wv_ppp_loan_data %>%
+  filter(date_approved > "2020-3-31" & date_approved < "2020-5-01")%>%
+    group_by(date_approved) %>%
+  summarise(
+    total_loans=n()
+  )
+
+  
+
+ppp_wv_loans_April %>%
+  ggplot() + 
+  geom_line(aes(x=date_approved, y=total_loans))+ 
+  scale_x_date(date_breaks = "1 day", date_labels = "%d-%m-%y") +
+  theme(
+    axis.text.x = element_text(angle = 45,  hjust=1)
+  )+
+ labs(
+    title="Which day in April 2020 saw the most loans approved in West Virginia?",
+    x = "date",
+    y = "total loans",
+    caption = "source: SBA PPP loan database")+
+geom_point(aes(x=date_approved, y=total_loans))+
+geom_text(aes(x=date_approved, y=total_loans, label=total_loans), size=3, hjust=1.5)
+
+
+```
+
+
 **A1.** 
+April 28th, 2020
+
 
 **Q2.** What are the top 10 states that got the most PPP loans per 100,000 people? You MUST do the following things when answering this question:
 
@@ -43,6 +84,15 @@ knitr::include_graphics(rep("images/chart_1.png"))
 * Use the tidycensus API to get a table of total population by state from the American Community Survey (ACS). To do this, you'll use use the alphanumeric variable for total population, which has the following "label" and "concept": "Estimate!!Total:" and "SEX BY AGE".  
 * Use ggplot to make a horizontal bar chart that shows the top 10 states, with the length of the bar determined by the state's total PPP loans per 100,000 people. Give it an appropriate title, source, and x and y axis titles. 
 * Make the bars on the chart blue! I didn't show you how to do this in the prelab, so do some web sleuthing to figure it out.  
+```{r}
+total_ppp_by_state<-read_csv("data/state_ppp_all.csv")
+
+pop_by_state<-acs5
+  median_age_total <- get_acs(geography = "county", variables = "B01002_001", year = 2019)
+
+
+```
+
 
 **A2.** 
 
