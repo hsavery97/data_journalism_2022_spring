@@ -140,29 +140,81 @@ shootings_race_known%>%
 
 percent_black_women<- 
   ((54/5941)*100)
+
 ```
 
 ### Sentence 4
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
+* **Sentence text**: Since 2015, Black women have accounted for less than 1 percent of the overall fatal shootings in cases where race was known. But within this small subset, Black women ... account for 20 percent of the women shot and killed and 28 percent of the unarmed deaths.”
+* **Analysis summary**: We were able to recreate the first number assuming cases where race is unknown are excluded. We don't know whether those cases were excluded or not. There is a 2% difference in our finding on the percentage of unarmed deaths black women accounted for, but this is a reasonable margin of error especially if the dataset was updated after the story was published. The real confusing part is whether they meant 28% of unarmed women or 28% of all unarmed deaths. It only makes sense for it to be unarmed women, there are just too few deaths relative to the total, but the sentence used in the article makes it seem like they're saying unarmed deaths as a whole. 
 ```{r}
 # Put code to reverse engineer sentence here
 
 # Display results of code below this codeblock
+
+shootings_race_known<-fatal_police_shootings%>%
+ drop_na(race)
+
+  shootings_women<-shootings_race_known%>%
+  filter(gender == 'F' )%>%
+  summarise(
+    count=n()
+    )
+  
+percent_black_women_women<-
+((54/280)*100)
+
+
+shootings_unarmed_women<-fatal_police_shootings%>%
+  filter(armed == "unarmed", gender=="F")%>%
+  group_by(armed, gender, race)%>%
+  summarise(
+    count=n()
+    )
+
+percent_black_women_unarmed<-
+((7/27)*100)
+
 
 ```
 
 ### Sentence 5
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: Black men... make up 27 percent of the men shot and 36 percent of the unarmed deaths.
+* **Analysis summary**: Again we exactly recreated the first result, but again our second result is 2 points off. It is really strange that it is exactly 2% in both cases. This is not from excluding race unknown, so why is it exactly 2% off in calculations for both women and men that are unarmed? The dataset could have changed, but the consistency seems odd. The vague wording in both cases could be to blame.  
 
 ```{r}
 # Put code to reverse engineer sentence here
 
 # Display results of code below this codeblock
+
+shootings_race_known<-fatal_police_shootings%>%
+ drop_na(race)
+
+  shootings_men<-shootings_race_known%>%
+  filter(gender == 'M')%>%
+  summarise(
+    count=n()
+    )
+  
+    shootings_black_men<-shootings_race_known%>%
+  filter(gender == 'M', race == 'B' )%>%
+  summarise(
+    count=n()
+    )
+ percent_black_men<- 
+((1538/5660)*100)
+ 
+ 
+ shootings_unarmed_men<-fatal_police_shootings%>%
+  filter(armed == "unarmed", gender=="M")%>%
+  group_by(armed, gender, race)%>%
+  summarise(
+    count=n()
+    )
+percent_unarmed_black_men<-
+((133/389)*100)
+ 
 
 ```
 
