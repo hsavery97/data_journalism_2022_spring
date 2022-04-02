@@ -84,17 +84,61 @@ April 28th, 2020
 * Use the tidycensus API to get a table of total population by state from the American Community Survey (ACS). To do this, you'll use use the alphanumeric variable for total population, which has the following "label" and "concept": "Estimate!!Total:" and "SEX BY AGE".  
 * Use ggplot to make a horizontal bar chart that shows the top 10 states, with the length of the bar determined by the state's total PPP loans per 100,000 people. Give it an appropriate title, source, and x and y axis titles. 
 * Make the bars on the chart blue! I didn't show you how to do this in the prelab, so do some web sleuthing to figure it out.  
+
+```{r}
+acs5 <- load_variables(2019, "acs5", cache = TRUE)
+View(acs5)
+```
+
 ```{r}
 total_ppp_by_state<-read_csv("data/state_ppp_all.csv")
 
-pop_by_state<-acs5
-  median_age_total <- get_acs(geography = "county", variables = "B01002_001", year = 2019)
+total_ppp_by_state<-total_ppp_by_state%>%
+  mutate(state = case_when(
+    state =="N Dakota"~"North Dakota",
+    state =="S Dakota"~"South Dakota",
+    TRUE~ state
+  ))
+
+all_states <- get_acs(geography = "state",
+              variables = c(total_pop = "B01001_001"),
+              year = 2019)%>%
+rename(state=NAME)
+
+all_states <- all_states%>% arrange(desc(estimate)) 
+
+
+
+PPP_pop <- all_states %>% inner_join(total_ppp_by_state)%>%
+select(-GEOID, -variable, -moe)%>%
+ mutate(per_hundredK = (total_ppp_loans/estimate)*100000)%>%
+    arrange(
+      desc(per_hundredK
+    ))%>%
+head(10)
+
+
+
+PPP_pop %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(state,per_hundredK), weight=per_hundredK), fill="blue") +
+  coord_flip() + 
+    labs(
+      title="States With Most PPP Loans Per 100k People",
+      x = "States",
+      y = "Loans per $100,000",
+      caption = "Source: SBA PPP Loan Database"
+    )
+
+
 
 
 ```
 
 
 **A2.** 
+
+South Dakota, North Dakota, Nebraska, Georgia, Iowa, Illionois, Louisiana, Florida, Mississippi, Montana, in that order.
 
 **Q3.**  A scatterplot is a type of chart that helps us see relationships between two variables. One variable goes on the x axis, the other on the y axis.  For each row/observation in our data, a scatterplot puts a circle (or a "point") where the two variables intersect on a grid. 
 
@@ -117,6 +161,22 @@ To answer those questions, make a codeblock and do the following:
 5. In the answer space below, describe what you see and answer the questions posed above.  In a general sense, what do you think this means?  
 
 **A3.**  
+Most loans were forgiven for about as much as they were approved for, there is more variability at the top end of the spectrum, but in general most loans were forgiven for their approval amount.
 
+```{r}
+wv_ppp_loan_data <- read_rds("data/lab_09.rds")
+
+wv_loans_low<-wv_ppp_loan_data%>%
+  filter(amount < 25000)%>%
+   drop_na(forgiveness_amount)
+
+
+wv_loans_low%>%
+ggplot+
+  geom_point(
+    mapping = aes(x=amount, y=forgiveness_amount)
+  )
+
+```
 
 -30-
