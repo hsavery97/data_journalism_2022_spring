@@ -76,7 +76,12 @@ barber_undisbursed_and_total<-barber_PPP_by_state%>%
 
 write_csv(barber_undisbursed_and_total, "data/top_states.csv")
 
+barber_undisbursed_and_total_big<-barber_PPP_by_state%>%
+  inner_join(barber_PPP_bigger, by=c("state"))%>%
+ rename(total_apps=total_loans.x, undisbursed_amount=total_loans.y)%>%
+  arrange(desc(total_apps))
 
+write_csv(barber_undisbursed_and_total_big, "data/undisbursed_and_total.csv")
 
 ```
 
@@ -88,25 +93,30 @@ https://datawrapper.dwcdn.net/mlVFo/1/
 
 ```{r}
 
-barber_loans_forgiven<-barber_shops%>%
-  filter(forgiveness_amount > 0)%>%
-    group_by(state)%>%
+
+urban<-barber_shops%>%
+  filter(rural_urban_indicator == "U")%>%
+  group_by(state)%>%
   summarise(
     total_loans=n()
-  )
+  )%>%
+rename("urban_barber_shops"="total_loans")
 
-barber_undisbursed_and_total_and_forgiven<-barber_undisbursed_and_total%>%
-  inner_join(barber_loans_forgiven, by=c("state"))%>%
- rename(forgiven_loans=total_loans)%>%
-  arrange(desc(total_apps))%>%
-    head(10)
 
-write_csv(barber_undisbursed_and_total_and_forgiven, "data/top_states_w_forgiveness.csv")
+undisbursed_total_urban<-barber_undisbursed_and_total%>%
+  inner_join(urban, by=c("state"))%>%
+  arrange(desc(total_apps))
+
+write_csv(undisbursed_total_urban, "data/top_states_urban.csv")
+
 
 
 ```
 
 **A2.**
+https://datawrapper.dwcdn.net/bjl6s/1/
+
+I added the information for whether the barbershops applying for loans were in urban or rural areas. Almost all of the barber shops applying for loans are in urban areas. This is particularly dramatic in a state ike California where there were just 37 barber shops classified as rural out of almost 9,000. 
 
 **Q3.** The online lender Kabbage, Inc. is featured in the [ProPublica PPP fake farms story](https://www.propublica.org/article/ppp-farms). To show where Kabbage was lending money, make a county-level map that shows the percentage of loans in each county that were Kabbage loans. To do this, make a codeblock and do the following:
 
@@ -119,4 +129,32 @@ write_csv(barber_undisbursed_and_total_and_forgiven, "data/top_states_w_forgiven
 7. Make a county-level map using that exported CSV file that displays the percentage of Kabbage loans. Style it so that the tooltip displays the county and the percentage, and format all percentages shown on the map so that they appear with one decimal point (such as 3.4%). Follow the same general guidelines as above for the chart's visual elements, and give the map a title, description and source. Provide a legend caption and format the percentage in the same way as on the tooltips.
 8. In the answer space below, provide the URL for your published map and then describe where Kabbage loans are and are not found. Where are they more common? Look specifically at Florida in the data: are there counties on the map where no data is displayed? Why?
 
+```{r}
+kabbage_counties<-read_csv("data/kabbage_counties.csv")
+
+all_counties<-read_csv("data/all_counties.csv")
+
+
+all_counties_w_kabbage<-all_counties%>%
+  inner_join(kabbage_counties, by=c("project_state", "project_county_name"))%>%
+ rename(all=total.x, kabbage=total.y)%>%
+  mutate(percentage_kabbage = 
+           ((kabbage/all)*100))%>%
+           arrange(desc(percentage_kabbage))%>%
+  rename(state=project_state,match_county=project_county_name)
+
+county_fips<-read_csv("data/county_fips.csv")
+
+all_counties_w_kabbage_w_fips<-all_counties_w_kabbage%>%
+  inner_join(county_fips, by=c("state","match_county"))
+
+write_csv(all_counties_w_kabbage_w_fips, "data/kabbage_kaos.csv")
+
+
+```
+
 **A3.**  
+
+https://datawrapper.dwcdn.net/U2sgv/1/
+
+Kabbage loans are concentrated in urban areas in Florida. The two areas missing Kabbages are very rural, one being a wildlife refuge. This is understandable, but unfortunate for the gators. 
