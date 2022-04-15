@@ -34,6 +34,12 @@ knitr::include_graphics(rep("images/geolayers.jpg"))
 
 Let's start with the absolute basics of geographic data: loading and viewing. Load libraries as usual.
 
+```{r}
+
+install.packages("tidyverse")
+
+```
+
 ### Task 1: Load packages
 **Task** Run the following code to load packages.
 
