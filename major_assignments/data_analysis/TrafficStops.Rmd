@@ -1,0 +1,30 @@
+---
+title: "Data Analysis Project"
+author: "Hunter Savery"
+date: "4/16/22"
+output:
+  html_document:
+    theme: cerulean
+    highlight: pygments
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE}
+options(scipen=999)
+library(tidyverse)
+```
+
+```{r}
+san_diego<-read_rds("san_diego.rds")
+```
+
+Notes: This data is already cleaned, as evidenced by the "RAW" columns. It seems to be able to answer all of our questions as it includes solid data on race, gender, sex, time of year, and locations. We even have a shape file for this so we can map out the traffic stops. There are some limitations because of N/A's in the reason for stop column. We'll get a better sense of how usable that column is once we remove the N/A's. We chose San Diego because it has lot's of data that includes many criteria relevant to our questions, and most excitingly it has a shape file. 
+
+This data set has 383,027 rows and 21 columns. 
