@@ -28,3 +28,60 @@ san_diego<-read_rds("san_diego.rds")
 Notes: This data is already cleaned, as evidenced by the "RAW" columns. It seems to be able to answer all of our questions as it includes solid data on race, gender, sex, time of year, and locations. We even have a shape file for this so we can map out the traffic stops. There are some limitations because of N/A's in the reason for stop column. We'll get a better sense of how usable that column is once we remove the N/A's. We chose San Diego because it has lot's of data that includes many criteria relevant to our questions, and most excitingly it has a shape file. 
 
 This data set has 383,027 rows and 21 columns. 
+
+```{r}
+san_diego_teens<-san_diego%>%
+filter(subject_age < 18)%>%
+ summarise(
+    row=n()
+  )
+
+san_diego_twenties<-san_diego%>%
+  filter(subject_age >=18, subject_age<25)%>%
+summarise(
+    row=n()
+  )
+
+
+san_diego_thirties<-san_diego%>%
+  filter(subject_age >=25, subject_age<35)%>%
+summarise(
+    row=n()
+  )
+
+
+san_diego_forties<-san_diego%>%
+  filter(subject_age >=35, subject_age<45)%>%
+summarise(
+    row=n()
+  )
+
+
+
+san_diego_fifties<-san_diego%>%
+  filter(subject_age >=45, subject_age<55)%>%
+summarise(
+    row=n()
+  )
+
+
+san_diego_sixities<-san_diego%>%
+  filter(subject_age >=55, subject_age<65)%>%
+summarise(
+    row=n()
+  )
+
+
+
+san_diego_oldies<-san_diego%>%
+  filter(subject_age >=65)%>%
+summarise(
+    row=n()
+  )
+
+
+
+
+  
+
+```
