@@ -29,59 +29,74 @@ Notes: This data is already cleaned, as evidenced by the "RAW" columns. It seems
 
 This data set has 383,027 rows and 21 columns. 
 
+
+1. Q. Which age groups are most likely to be stopped? 
+    A. 25 to 35-year-olds account for the largest proportion of people stopped. Drivers under 18 and over 65 are the least likely to be pulled over. However, we need more data to get an accurate picture. It is likely that there are simply more 25-35-year-olds on the road. We need to know how many total dirvers licenses are active per age group.
+
 ```{r}
-san_diego_teens<-san_diego%>%
-filter(subject_age < 18)%>%
- summarise(
-    row=n()
-  )
-
-san_diego_twenties<-san_diego%>%
-  filter(subject_age >=18, subject_age<25)%>%
-summarise(
-    row=n()
-  )
-
-
-san_diego_thirties<-san_diego%>%
-  filter(subject_age >=25, subject_age<35)%>%
-summarise(
-    row=n()
-  )
-
-
-san_diego_forties<-san_diego%>%
-  filter(subject_age >=35, subject_age<45)%>%
-summarise(
-    row=n()
-  )
 
 
 
-san_diego_fifties<-san_diego%>%
-  filter(subject_age >=45, subject_age<55)%>%
-summarise(
-    row=n()
-  )
-
-
-san_diego_sixities<-san_diego%>%
-  filter(subject_age >=55, subject_age<65)%>%
-summarise(
-    row=n()
-  )
-
-
-
-san_diego_oldies<-san_diego%>%
-  filter(subject_age >=65)%>%
-summarise(
-    row=n()
-  )
-
-
-
+san_diego_new<-san_diego%>%
+mutate(
+  age_group = case_when(
+    subject_age < 18 ~ 'under_18',
+    subject_age >=18 & subject_age < 25 ~ '18_25',
+    subject_age >= 25 & subject_age < 35 ~ '23_35',
+    subject_age >= 35 & subject_age < 45 ~ '35_45',
+    subject_age >= 45 & subject_age < 55 ~ '45_55',
+   subject_age >= 55 & subject_age < 65 ~ '55_65',
+   subject_age >= 65 ~'65+'
+))
 
   
+ age_group_counts <- san_diego_new %>%
+  drop_na(age_group)%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+```
+
+2. Q. Which age group is most often searched during a traffic stop? Which group is most likely to be searched if stopped?
+A. 25-35-year-olds make up the majority of stops, but if we look at the percentages, 18-25-year-olds are actually the most likely to be searched when stopped.
+
+```{r}
+
+searches_by_age <- san_diego_new %>%
+  drop_na(subject_age)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+better_searches<-age_group_counts%>%
+  inner_join(searches_by_age, by=c("age_group"))%>%
+   rename(total_stops=count.x, total_searches=count.y)%>%
+  mutate(percentage_searched = 
+           ((total_searches/total_stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+```
+
+3. Q.When searches are conducted which age group is most likely to be found with contraband? How accurate are police in guessing who has contraband?
+A. 45-55-year-olds are found with contraband at the highest rate. This contradicts the search activity of police which seems to target younger drivers. 
+
+```{r}
+
+contraband <- san_diego_new %>%
+   drop_na(subject_age)%>%
+  drop_na(contraband_found)%>%
+  filter(search_conducted == "TRUE", contraband_found == "TRUE")%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+searches_w_contraband<-better_searches%>%
+  inner_join(contraband, by=c("age_group"))%>%
+  rename(contraband_found=count)%>%
+  mutate(percentage_w_contraband = 
+           ((contraband_found/total_searches)*100))%>%
+           arrange(desc(percentage_w_contraband))
 
 ```
