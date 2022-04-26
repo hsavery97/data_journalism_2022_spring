@@ -59,16 +59,32 @@ wv_police_incidents_datetime<-wv_police_incidents%>%
     datetime=mdy_hm(datetime),
     date=date(datetime),
     time=format(datetime,
-    format="%H:%M",
+    format="%H:%M"),
     weekday=wday(datetime,
     label = TRUE,
-    abbr=FALSE))
+    abbr=FALSE)
     
-  )
+  )%>%
+  arrange(desc(date)) 
 
-latest_date <- wv_police_incidents_datetime %>% slice(1)
 
-previous_month <- ranked %>% filter(vaccination_date == latest_date$vaccination_date - 30)
+
+
+latest_date <- wv_police_incidents_datetime %>% 
+  slice(1)
+  
+previous_month <- wv_police_incidents_datetime %>% filter(date >= latest_date$date - 30)%>%
+  filter(title=="SUSPICIOUS EVENT")%>%
+  summarise(count=n())
+
+sub <- paste("On", format(latest_date$date, format="%B %d"), " ", " A supicious event occured. It was the", format(previous_month),"time it has ocurred in the previous 30 days", sep="")
+sub
+```
+
+
+
+
+
 ```
 
 **A1.**
