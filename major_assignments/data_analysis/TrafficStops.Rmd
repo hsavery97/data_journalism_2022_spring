@@ -100,3 +100,38 @@ searches_w_contraband<-better_searches%>%
            arrange(desc(percentage_w_contraband))
 
 ```
+
+
+
+```{r}
+
+searches_by_age_and_race <- san_diego_new %>%
+  drop_na(subject_age)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+better_searches_race<-age_group_counts%>%
+  inner_join(searches_by_age, by=c("age_group"))%>%
+   rename(total_stops=count.x, total_searches=count.y)%>%
+  mutate(percentage_searched = 
+           ((total_searches/total_stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+```
+```
+
+
+
+```{r}
+
+sand_diego_shape <- st_read("ca_san_diego_shapefiles/divisions_datasd.shp")
+
+ggplot() + 
+  geom_sf(data=sand_diego_shape) + 
+  geom_sf(data=san_diego) +
+  theme_minimal()
+
+```
+
