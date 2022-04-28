@@ -27,6 +27,10 @@ library(janitor)
 library(lubridate)
 library(ggrepel)
 library(sf)
+library(tidycensus)
+library(tigris)
+library(ggplot2)
+census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
 ```
 
 ```{r}
@@ -63,34 +67,31 @@ wv_police_incidents_datetime<-wv_police_incidents%>%
     weekday=wday(datetime,
     label = TRUE,
     abbr=FALSE)
-    
   )%>%
   arrange(desc(date)) 
-
-
-
 
 latest_date <- wv_police_incidents_datetime %>% 
   slice(1)
   
-previous_month <- wv_police_incidents_datetime %>% filter(date >= latest_date$date - 30)%>%
-  filter(title=="SUSPICIOUS EVENT")%>%
+previous_month <- wv_police_incidents_datetime %>% 
+  filter(date >= latest_date$date - 30)%>%
+  filter(title == latest_date$title)%>%
   summarise(count=n())
 
-sub <- paste("On", format(latest_date$date, format="%B %d"), " ", " A supicious event occured. It was the", format(previous_month),"time it has ocurred in the previous 30 days", sep="")
+sub <- paste("On", format(latest_date$date,  format="%B %d"),",", "there was a", format(latest_date$title),".", "There were", format(previous_month$count), "in the last 30 days.")
+
 sub
 ```
 
 
 
 
-
-```
-
 **A1.**
 
-```{r}
-```
+[1] "On April 21 , there was a SUSPICIOUS EVENT . There were 7 in the last 30 days."
+
+You could also ask it for the location of the most recent incident and if there have been any other incidents at that location in the past month.
+
 
 **Q2.** Maryland produces a [CSV file](https://raw.githubusercontent.com/state-of-maryland/VaccineCSVs/master/Vax_ZIP_CODE_FirstSecondSingle_Totals_Raw.csv) showing the total number of vaccinations by zip code and -- interestingly -- it includes non-Maryland zip codes (as well as some zip codes that seem to be bad data). write a script that reads the CSV file, making the columns more readable and adding today's date. Then output the top 25 Maryland zip codes and top 25 non-Maryland zip codes based on number of people fully vaccinated, and write both dataframes out to CSV files, using the following name formats:
 
@@ -110,6 +111,38 @@ Google the top 2-3 zip codes from both Maryland and non-Maryland results and des
 **A2.**
 
 ```{r}
+
+maryland_vaccines <- read_csv("https://raw.githubusercontent.com/state-of-maryland/VaccineCSVs/master/Vax_ZIP_CODE_FirstSecondSingle_Totals_Raw.csv")
+
+md_vaxxier<-maryland_vaccines%>%
+  mutate(todays_date=today(tzone = "EST"))%>%
+  rename(zip=ZIP_CODE)%>%
+  mutate(zip=str_sub(zip, 1, 5))%>%
+  filter(zip>= 20588 & zip <= 21930)%>%
+  arrange(desc(FullyVaccinated))%>%
+  head(25)
+
+non_md_vaxxier<-maryland_vaccines%>%
+  mutate(todays_date=today(tzone="EST"))%>%
+  rename(zip=ZIP_CODE)%>%
+  mutate(zip=str_sub(zip,1,5))%>%
+  filter(zip >= 1000)%>%
+  filter(zip > 21930 | zip<20588)%>%
+  arrange(desc(FullyVaccinated))%>%
+  head(25)
+
+write.csv(md_vaxxier,paste("data/md_vaxxier",today(),".csv"))
+
+write.csv(md_vaxxier,paste("data/non_md_vaxxier",today(),".csv"))
+
+
+sub2 <- paste("On", format(latest_date$date,  format="%B %d"),",", "the zipcodes with the most daily vaccinations were",format(md_vaxxier$zip))
+
+sub2
+
+##The last few lines are apparently unnecessary but here they are anyway, enjoy!##
+
+
 ```
 
 **Q3.** Maryland has had one of the more successful vaccination rates, but you want to understand where a significant portion of the population remains less than fully vaccinated. Make a dataframe of all Maryland zip codes from the vaccination data you used in Q2 and join it to Maryland zip code population data from the Census API. Calculate the percentage of fully vaccinated for each zip code and then make a map showing the zip codes with less than 50 percent fully vaccinated. Put a blank map with the outline of Maryland counties (which you can get from Tigris) behind it for context. Add a label to the map describing what the data is and include the date from the vaccination data (programmatically, so you can run it every day).
@@ -121,4 +154,60 @@ Describe the output of the map below, and say what you think the most interestin
 **A3.**
 
 ```{r}
+all_zips<-get_acs(geography="zcta",
+                  variables=c(totalpop=
+                   "B01003_001"),
+                  year=2019)
+
+md_zips<-all_zips%>%
+  rename(zip=GEOID)%>%
+  filter(zip>=20588 & zip <= 21930)
+
+md_vax_again<-maryland_vaccines%>%
+  mutate(todays_date=today(tzone="EST"))%>%
+  rename(zip=ZIP_CODE)%>%
+  mutate(zip=str_sub(zip, 1, 5))%>%
+  filter(zip>=20588 & zip <= 21930)
+
+md_zips_and_vax<-md_vax_again%>%
+  inner_join(md_zips, by=c("zip"))%>%
+  mutate(percent_shotted = 
+           (FullyVaccinated/estimate)*100)
+
+counties <- counties()
+
+  md_counties <- counties %>%
+  filter(STATEFP == "24")
+  
+  md_counties %>%
+  rename(zip=GEOID)%>%
+  ggplot() + 
+  geom_sf() + 
+  theme_minimal()
+  
+  
+  md_zips_and_vax%>%
+    rename(GEOID=zip)
+  
+    
+zip_X_counties_collab<-md_zips_and_vax%>%
+  inner_join(md_counties, by=c("GEOID"))
+  
+
+  
+  ggplot() + 
+  geom_sf(data=md_counties) + 
+  geom_sf(data=md_zips_and_vax,
+    aes(fill=percent_shotted))+
+  theme_minimal()+
+    scale_fill_viridis_b(option="magma", trans="log")+
+    labs(title=paste("Percent of population fully vaccinated on",md_zips_and_vax$date, sep=""))
+```
+
+```{r}ggplot()+
+  geom_sf(data=md_zips_and_vax,
+          aes(fill=percent_vaxxed))+
+  scale_fill_viridiris_c(option="plasma", trans = "sqrt")+
+  theme_void()##
+  
 ```
