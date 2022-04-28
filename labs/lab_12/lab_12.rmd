@@ -28,6 +28,8 @@ library(lubridate)
 library(ggrepel)
 library(sf)
 library(tidycensus)
+library(tigris)
+library(ggplot2)
 census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
 ```
 
@@ -138,7 +140,7 @@ sub2 <- paste("On", format(latest_date$date,  format="%B %d"),",", "the zipcodes
 
 sub2
 
-##This is unnecessary 
+##The last few lines are apparently unnecessary but here they are anyway, enjoy!##
 
 
 ```
@@ -168,14 +170,44 @@ md_vax_again<-maryland_vaccines%>%
   filter(zip>=20588 & zip <= 21930)
 
 md_zips_and_vax<-md_vax_again%>%
-  inner_join(md_zips, b=c("zip"))%>%
-  mutate(percent_vaxxed = 
+  inner_join(md_zips, by=c("zip"))%>%
+  mutate(percent_shotted = 
            (FullyVaccinated/estimate)*100)
 
-ggplot()+
+counties <- counties()
+
+  md_counties <- counties %>%
+  filter(STATEFP == "24")
+  
+  md_counties %>%
+  rename(zip=GEOID)%>%
+  ggplot() + 
+  geom_sf() + 
+  theme_minimal()
+  
+  
+  md_zips_and_vax%>%
+    rename(GEOID=zip)
+  
+    
+zip_X_counties_collab<-md_zips_and_vax%>%
+  inner_join(md_counties, by=c("GEOID"))
+  
+
+  
+  ggplot() + 
+  geom_sf(data=md_counties) + 
+  geom_sf(data=md_zips_and_vax,
+    aes(fill=percent_shotted))+
+  theme_minimal()+
+    scale_fill_viridis_b(option="magma", trans="log")+
+    labs(title=paste("Percent of population fully vaccinated on",md_zips_and_vax$date, sep=""))
+```
+
+```{r}ggplot()+
   geom_sf(data=md_zips_and_vax,
           aes(fill=percent_vaxxed))+
   scale_fill_viridiris_c(option="plasma", trans = "sqrt")+
-  theme_void()
+  theme_void()##
   
 ```
