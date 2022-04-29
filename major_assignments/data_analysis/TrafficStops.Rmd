@@ -92,6 +92,8 @@ contraband <- san_diego_new %>%
   summarise(count=n())%>%
    arrange(desc(count))
 
+
+
 searches_w_contraband<-better_searches%>%
   inner_join(contraband, by=c("age_group"))%>%
   rename(contraband_found=count)%>%
@@ -100,26 +102,109 @@ searches_w_contraband<-better_searches%>%
            arrange(desc(percentage_w_contraband))
 
 ```
-
+4. Race and age
 
 
 ```{r}
 
 searches_by_age_and_race <- san_diego_new %>%
   drop_na(subject_age)%>%
+    drop_na(subject_race)%>%
   filter(search_conducted == "TRUE")%>%
   group_by(age_group, subject_race) %>%
   summarise(count=n())%>%
    arrange(desc(count))
 
-better_searches_race<-age_group_counts%>%
-  inner_join(searches_by_age, by=c("age_group"))%>%
-   rename(total_stops=count.x, total_searches=count.y)%>%
-  mutate(percentage_searched = 
-           ((total_searches/total_stops)*100))%>%
-           arrange(desc(percentage_searched))
+contraband_w_race <- san_diego_new %>%
+   drop_na(subject_age)%>%
+  drop_na(contraband_found)%>%
+  filter(search_conducted == "TRUE", contraband_found == "TRUE")%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+searches_and_contraband_age_race<-searches_by_age_and_race%>%
+  inner_join(contraband_w_race, by=c("age_group","subject_race"))%>%
+  rename(searches=count.x, contraband_found=count.y) %>%
+  mutate(percentage_w_contraband = 
+           ((contraband_found/searches)*100))%>%
+           arrange(desc(percentage_w_contraband))
+
 
 ```
+
+
+```{r}
+
+stops_age_race<-san_diego_new%>%
+  drop_na(subject_age)%>%
+    drop_na(subject_race)%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+Age_race_stops_etc<-searches_and_contraband_age_race%>%
+  inner_join(stops_age_race, by=c("age_group","subject_race"))%>%
+  rename(stops=count)%>%
+  mutate(percentage_searched = 
+           ((searches/stops)*100))%>%
+           arrange(desc(percentage_searched))
+```
+
+When we combine race with age groups we see a much more signififcant disparity between groups stopped and 
+
+5. 
+
+```{r}
+stops_by_location <- san_diego_new %>%
+  group_by(service_area) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))%>%
+  rename(stops=count)
+
+searches_by_location <- san_diego_new %>%
+  drop_na(subject_age)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(service_area) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(searches = count)
+
+stops_searches_locations<-stops_by_location%>%
+  inner_join(searches_by_location, by=c("service_area"))%>%
+  mutate(percentage_searched = 
+           ((searches/stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+
+```
+
+
+```{r}
+mega_stops<-san_diego_new%>%
+  drop_na(subject_age,)%>%
+    drop_na(subject_race)%>%
+  group_by(age_group, subject_race,service_area) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+mega_searches <- san_diego_new %>%
+  drop_na(subject_age)%>%
+  drop_na(subject_race)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group, subject_race, service_area) %>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+
+mega_seaches_mega_stops<-mega_stops%>%
+  inner_join(mega_searches, by=c("age_group","subject_race", "service_area"))%>%
+  rename(stops=count.x, searches=count.y)%>%
+   mutate(percentage_searched = 
+           ((searches/stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+
+
 ```
 
 
