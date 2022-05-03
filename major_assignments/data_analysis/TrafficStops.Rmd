@@ -208,15 +208,126 @@ mega_seaches_mega_stops<-mega_stops%>%
 ```
 
 
+```{r}
+san_antonio<-read_rds("San_Antonio.rds")
+```
+
 
 ```{r}
 
-sand_diego_shape <- st_read("ca_san_diego_shapefiles/divisions_datasd.shp")
+san_antonio_new<-san_antonio%>%
+mutate(
+  age_group = case_when(
+    subject_age < 18 ~ 'under_18',
+    subject_age >=18 & subject_age < 25 ~ '18_25',
+    subject_age >= 25 & subject_age < 35 ~ '23_35',
+    subject_age >= 35 & subject_age < 45 ~ '35_45',
+    subject_age >= 45 & subject_age < 55 ~ '45_55',
+   subject_age >= 55 & subject_age < 65 ~ '55_65',
+   subject_age >= 65 ~'65+'
+))
 
-ggplot() + 
-  geom_sf(data=sand_diego_shape) + 
-  geom_sf(data=san_diego) +
-  theme_minimal()
+  
+ sa_age_group_counts <- san_antonio_new %>%
+  drop_na(age_group)%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+ 
+ 
+sa_searches_by_age <- san_antonio_new %>%
+  drop_na(subject_age)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+sa_better_searches<-sa_age_group_counts%>%
+  inner_join(searches_by_age, by=c("age_group"))%>%
+   rename(total_stops=count.x, total_searches=count.y)%>%
+  mutate(percentage_searched = 
+           ((total_searches/total_stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+sa_contraband <- san_antonio_new %>%
+   drop_na(subject_age)%>%
+  drop_na(contraband_found)%>%
+  filter(search_conducted == "TRUE", contraband_found == "TRUE")%>%
+  group_by(age_group) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+
+sa_searches_w_contraband<-sa_better_searches%>%
+  inner_join(contraband, by=c("age_group"))%>%
+  rename(contraband_found=count)%>%
+  mutate(percentage_w_contraband = 
+           ((contraband_found/total_searches)*100))%>%
+           arrange(desc(percentage_w_contraband))
+
+sa_searches_by_age_and_race <- san_antonio_new %>%
+  drop_na(subject_age)%>%
+    drop_na(subject_race)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+sa_contraband_w_race <- san_antonio_new %>%
+   drop_na(subject_age)%>%
+  drop_na(contraband_found)%>%
+  filter(search_conducted == "TRUE", contraband_found == "TRUE")%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+sa_searches_and_contraband_age_race<-sa_searches_by_age_and_race%>%
+  inner_join(contraband_w_race, by=c("age_group","subject_race"))%>%
+  rename(searches=count.x, contraband_found=count.y) %>%
+  mutate(percentage_w_contraband = 
+           ((contraband_found/searches)*100))%>%
+           arrange(desc(percentage_w_contraband))
+
+sa_stops_age_race<-san_antonio_new%>%
+  drop_na(subject_age)%>%
+    drop_na(subject_race)%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+sa_age_race_stops_etc<-sa_searches_and_contraband_age_race%>%
+  inner_join(stops_age_race, by=c("age_group","subject_race"))%>%
+  rename(stops=count)%>%
+  mutate(percentage_searched = 
+           ((searches/stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+
+sa_mega_stops<-san_antonio_new%>%
+  drop_na(subject_age,)%>%
+    drop_na(subject_race)%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+   arrange(desc(count))
+
+sa_mega_searches <- san_antonio_new %>%
+  drop_na(subject_age)%>%
+  drop_na(subject_race)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by(age_group, subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+
+sa_mega_seaches_mega_stops<-sa_mega_stops%>%
+  inner_join(mega_searches, by=c("age_group","subject_race"))%>%
+  rename(stops=count.x, searches=count.y)%>%
+   mutate(percentage_searched = 
+           ((searches/stops)*100))%>%
+           arrange(desc(percentage_searched))
+
+```
+
+
 
 ```
 
