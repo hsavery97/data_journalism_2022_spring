@@ -19,6 +19,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r echo=FALSE, message=FALSE}
 options(scipen=999)
 library(tidyverse)
+library(tidycensus)
+census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
 ```
 
 ```{r}
@@ -328,6 +330,106 @@ sa_mega_seaches_mega_stops<-sa_mega_stops%>%
 ```
 
 
+```{r}
+#San Diego breakdown by race
+san_diego_searches_race <- san_diego_new %>%
+  drop_na(subject_race)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by( subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(searches = count)
+
+san_diego_contraband_race <- san_diego_new %>%
+  drop_na(subject_race)%>%
+  filter(contraband_found == "TRUE")%>%
+  group_by( subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(contraband = count)
+
+sd_race_percentage_search_contraband <- san_diego_contraband_race %>%
+    inner_join(san_diego_searches_race, by=c("subject_race"))
+sd_race_percentage_search_contraband <- sd_race_percentage_search_contraband %>%
+  mutate(percent_contraband=(contraband/searches)*100) %>%
+  arrange(desc(percent_contraband))
+
+san_diego_stops_race <- san_diego_new %>%
+  drop_na(subject_race)%>%
+  group_by(subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(stops = count)
+
+sd_stops_percentage_searches <- san_diego_stops_race %>%
+  inner_join(san_diego_searches_race, by=c("subject_race"))
+sd_stops_percentage_searches <- sd_stops_percentage_searches %>%
+  mutate(percent_searched=(searches/stops)*100) %>%
+  arrange(desc(percent_searched))
+
+sd_race_percentage_stops_search_contraband <- sd_race_percentage_search_contraband %>%
+  inner_join(sd_stops_percentage_searches, by=c("subject_race","searches"))
+```
+
+
+```{r}
+#San Antonio breakdown by race
+san_antonio_searches_race <- san_antonio %>%
+  drop_na(subject_race)%>%
+  filter(search_conducted == "TRUE")%>%
+  group_by( subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(searches = count)
+
+san_antonio_contraband_race <- san_antonio %>%
+  drop_na(subject_race)%>%
+  filter(contraband_found == "TRUE")%>%
+  group_by(subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(contraband = count)
+
+sa_race_percentage_search_contraband <- san_antonio_contraband_race %>%
+    inner_join(san_antonio_searches_race, by=c("subject_race"))
+sa_race_percentage_search_contraband <- sa_race_percentage_search_contraband %>%
+  mutate(percent_contraband=(contraband/searches)*100) %>%
+  arrange(desc(percent_contraband))
+san_antonio_stops_race <- san_antonio %>%
+  drop_na(subject_race)%>%
+  group_by(subject_race) %>%
+  summarise(count=n())%>%
+  arrange(desc(count)) %>%
+  rename(stops = count)
+
+sa_stops_percentage_searches <- san_antonio_stops_race %>%
+  inner_join(san_antonio_searches_race, by=c("subject_race"))
+sa_stops_percentage_searches <- sa_stops_percentage_searches %>%
+  mutate(percent_searched=(searches/stops)*100) %>%
+  arrange(desc(percent_searched))
+
+sa_race_percentage_stops_search_contraband <- sa_race_percentage_search_contraband %>%
+  inner_join(sa_stops_percentage_searches, by=c("subject_race","searches"))
+```
+
+
+```{r}
+Wow_look_at_this<-sa_race_percentage_stops_search_contraband%>%
+   inner_join(sd_race_percentage_stops_search_contraband, by=c("subject_race"))%>%
+    rename(san_antonio_contraband=contraband.x,san_antonio_searches=searches.x,san_antonio_percentage_contraband=percent_contraband.x,san_diego_contraband=contraband.y,san_diego_searches=searches.y,san_diego_percentage_contraband=percent_contraband.y, san_antonio_stops=stops.x, san_diego_stops=stops.y,san_antonio_percent_searched=percent_searched.x, san_diego_percent_searched=percent_searched.y)
+
+write.csv(Wow_look_at_this, "wow_look_at_this.csv", row.names=FALSE)
 
 ```
+
+
+```{r}
+
+acs5 <- load_variables(2019, "acs5", cache = TRUE)
+
+
+san_diego_acs <- get_acs('place', variables =c('B01001_001'), year=2019, state = 'CA') %>% filter(GEOID == '0666000')
+
+```
+
 
