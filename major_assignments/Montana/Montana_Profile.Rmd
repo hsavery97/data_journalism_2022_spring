@@ -1,0 +1,214 @@
+---
+title: "Montana_profile"
+author: "Hunter Savery"
+date: '2022-05-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+install.packages("ggrepel")
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(ggrepel)
+library(sf)
+library(tigris)
+library(tidycensus)
+census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
+```
+
+```{r}
+Montana<-read.csv("montana_ppp.csv")
+```
+
+```{r}
+Montana <- Montana %>% 
+    mutate(project_city = str_to_title(project_city))%>%
+    mutate(address = str_to_title(address))%>%
+    mutate(name = str_to_title(name))%>%
+    mutate(project_county_name = str_to_title(project_county_name))
+
+Montana <- Montana %>%
+  distinct() %>%
+  unique() %>%
+  mutate(zip = str_sub(zip, 1, 5))
+```
+
+**Q1.**. Write R code that generates some basic descriptive statistics that allows you to describe the applications from your state. This code should produce results that describe the data in different ways: how many applications there are, along with ways to understand the typical and most frequent values for columns you find interesting or newsworthy. You should produce at least five (5) descriptive statistics and write up a summary of the data using them.
+
+```{r}
+Montana_counties <- Montana %>% 
+  group_by(project_county_name) %>% 
+  summarise(total=n(), total_loans=n(), total_loan_amounts = sum(amount)) %>%  
+  arrange(desc(total))
+```
+
+```{r}
+Montana_cities <- Montana %>% 
+  mutate(project_city = str_to_title(project_city))%>% 
+  group_by(project_city) %>%
+  summarise(total=n()) %>% 
+  arrange(desc(total))
+```
+
+```{r}
+lender_city <- Montana %>% 
+  group_by(originating_lender_city) %>% 
+  summarise(total=n()) %>% 
+  arrange(desc(total))
+
+retained <- Montana %>% 
+    group_by(project_county_name) %>% 
+  summarise(total_loans=n(), total_jobs = sum(jobs_retained))%>% 
+  arrange(desc(total_jobs))
+
+zip_loan <- Montana %>%
+   drop_na(zip) %>%
+   group_by(zip) %>%
+   summarise(total=n()) %>% 
+  arrange(desc(total))
+``` 
+
+A1: 
+## Geographic Analysis
+
+**Q2.** Write R code that examines geographic patterns for PPP loans in your state, using Census population information to calculate a per-capita figure for the state and counties and zip codes. Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure. Describe the most interesting or newsworthy findings based on your exploration. LAB 11 ZIP CODES Lab 8
+
+## 2a - get census
+
+```{r}
+load_variables(2019, "acs1")
+MT_pop <- get_acs(geography = "state", 
+                  variables = "B01001_001", 
+                  year = 2019, 
+                  geometry = TRUE) %>% 
+  filter(NAME == "Montana")
+
+county_pop <- get_acs(geography = "county", 
+                      variables = "B01001_001", 
+                      year = 2019, 
+                      geometry = TRUE) %>% 
+  filter(str_detect(NAME, ", Montana"))
+
+zip_pop <- get_acs(geography = "zcta", 
+                   variables = "B01001_001", 
+                   year = 2019, 
+                   geometry = TRUE) %>% 
+  filter(GEOID >= 59001 & GEOID <= 59937)
+```
+
+## 2b - total loans per cap
+
+```{r}
+MT_loans_per_capita <- Montana %>% 
+  summarise(count=n()) %>% 
+  mutate(per_capita = count/MT_pop$estimate)
+```
+
+## 2c - clean census tables
+
+```{r}
+county_poppier <- county_pop %>% 
+  mutate(
+    NAME = str_replace(NAME," County, Montana",""),
+    NAME = str_to_upper(NAME)
+  ) %>% 
+  rename(
+    project_county_name = NAME,
+    population = estimate
+  ) %>% 
+  select(project_county_name,population,geometry)
+
+zip_poppier <- zip_pop %>% 
+  rename(
+    population = estimate,
+    zip = GEOID
+  ) %>% 
+  select(zip,population,geometry)
+```
+
+## 2d - join
+
+```{r}
+county_ppp <- Montana %>% 
+  group_by(project_county_name) %>% 
+  summarise(count=n()) %>% 
+  left_join(county_poppier, by = "project_county_name")
+
+zip_ppp <- Montana %>% 
+  group_by(zip) %>% 
+  summarise(count=n()) %>% 
+  left_join(zip_poppier, by = "zip")
+```
+
+## 2e - per capita
+
+```{r}
+county_per_capita <- county_ppp %>% 
+  mutate(loans_per_capita = count/population) %>% 
+  arrange(desc(loans_per_capita))
+
+zip_per_capita <- zip_ppp %>% 
+  mutate(
+    loans_per_capita = count/population,
+    per_cap_diff = MT_loans_per_capita$per_capita - loans_per_capita
+  ) %>% 
+  arrange(desc(per_cap_diff))
+
+MT_per_capita <- MT_pop %>% 
+  select(NAME,estimate) %>% 
+  mutate(
+    loans = nrow(Montana),
+    loans_per_cap = loans/estimate
+  )
+```
+
+Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure.
+
+## 2f - Tigris map
+
+```{r}
+counties <- counties()
+MT_counties <- counties %>% 
+  filter(STATEFP == "30")
+MT_counties %>% 
+  ggplot() +
+  geom_sf() +
+  theme_minimal()
+```
+
+## 2g - county map
+
+```{r}
+ggplot() +
+  geom_sf(data=MT_counties, fill="white") +
+  geom_sf(data=county_per_capita, aes(fill=loans_per_capita,geometry=geometry)) +
+  scale_fill_gradient(low="blue",high="yellow") +
+  theme_minimal()
+```
+
+## 2h - zip map
+
+```{r}
+ggplot() +
+  geom_sf(data=MT_counties, fill="white") +
+  geom_sf(data=zip_per_capita, aes(fill=per_cap_diff,geometry=geometry)) +
+  scale_fill_distiller(type = "div", palette = 1, direction = 1, aesthetics = "fill") +
+  theme_minimal() +
+  labs(
+    title = "ZIP Codes with small populations received massively more loans per capita"
+  )
+```
+
+
+Describe the most interesting or newsworthy findings based on your exploration.
+
+**A2.** 
+There seem to be a few ZIP codes that had extremely high loans per capita: 59062, 59244, 59424 and 59256 chief among them. These zip codes all have phenomenally low populations - in the case of 59062 in Otter, the loans per capita is actually 1. These are all zip codes in the middle of nowhere, quite far from major (for Montana) metro areas like Bozeman or Missoula.
+
+
+
+
+

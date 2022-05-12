@@ -424,12 +424,59 @@ write.csv(Wow_look_at_this, "wow_look_at_this.csv", row.names=FALSE)
 
 
 ```{r}
+making_a_chart<-Wow_look_at_this%>%
+  select(subject_race, san_diego_percent_searched, san_antonio_percent_searched)
+  
+  
+  write.csv(making_a_chart, "percent_search_chart.csv", row.names=FALSE)
 
-acs5 <- load_variables(2019, "acs5", cache = TRUE)
-
-
-san_diego_acs <- get_acs('place', variables =c('B01001_001'), year=2019, state = 'CA') %>% filter(GEOID == '0666000')
+# https://datawrapper.dwcdn.net/Er7if/1/ #
 
 ```
+
+```{r}
+# A is white, Black is B, I is Hispanic, D is Asian, E is pacific island
+california_pop <- get_acs ('place',
+                           variables=c("B01001_001","B01001A_001","B01001B_001","B01001I_001","B01001D_001","B01001E_001"),
+                           year=2019,
+                           state = 'CA') %>% 
+                           filter(GEOID == '0666000')
+california_pop <- california_pop %>%
+  mutate(
+   subject_race = case_when(
+    variable == "B01001_001" ~ 'total',
+    variable == "B01001A_001" ~ 'white',
+    variable == "B01001B_001" ~ 'black',
+    variable == "B01001I_001" ~ 'hispanic',
+    variable == "B01001D_001" ~ 'asian',
+    variable == "B01001E_001" ~ 'pacific islander',
+  ))
+#combining asian and pacific islander, 235676 + 5849 = 241525
+california_pop <- california_pop %>%
+  add_row(subject_race="asian/pacific islander", estimate=241525) %>%
+  select(-GEOID,-NAME,-variable,-moe)
+#joining San Diego's population to the stop totals, chose to drop other
+sd_stops_pop_by_race <- san_diego_stops_race %>%
+  inner_join(california_pop, by=c("subject_race")) %>%
+  rename(population=estimate) %>%
+  head(4)
+#calculating stops per capita for each of the known race categories
+sd_stops_pop_by_race <- sd_stops_pop_by_race %>%
+  mutate(percent_stopped=(stops/population)*100) %>%
+  arrange(desc(percent_stopped))
+
+```
+
+```{r}
+
+per_capita_chart<-sd_stops_pop_by_race%>%
+  select(subject_race, percent_stopped)
+
+write.csv(per_capita_chart, "per_capita_chart.csv", row.names=FALSE)
+
+## https://datawrapper.dwcdn.net/HgUCF/1/ ##
+
+```
+
 
 
