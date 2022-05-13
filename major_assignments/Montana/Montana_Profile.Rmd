@@ -7,110 +7,144 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-options(scipen=999)
-install.packages("ggrepel")
-library(tidyverse)
-library(janitor)
-library(lubridate)
-library(ggrepel)
-library(sf)
-library(tigris)
+```
+
+## PPP State Profile
+
+Your assignment is to explore a dataset of PPP loan applications for a particular state and to answer a series of questions that will help you summarize that state's loan applications. You will need to write R code to answer those questions. You also will bring in other data, including Census information, and you will be making graphics, including maps, to illustrate your findings.
+
+The deliverable will be this R Markdown notebook and a data folder that you will receive with a state's loan application data. Place any other data you are using to answer the questions in the same data folder.
+
+## Load libraries and establish settings
+
+**Task** Create a codeblock and load appropriate packages and settings for this assignment.
+
+```{r}
+install.packages("ggthemes")
 library(tidycensus)
-census_api_key("84c34e9fd2690050a6b2968bd44aa4085801c08f")
+library(tidyverse)
+library(tigris)
+library(lubridate)
+library(janitor)
+library(ggthemes)
+options(scipen=999)
 ```
 
-```{r}
-Montana<-read.csv("montana_ppp.csv")
-```
 
-```{r}
-Montana <- Montana %>% 
-    mutate(project_city = str_to_title(project_city))%>%
-    mutate(address = str_to_title(address))%>%
-    mutate(name = str_to_title(name))%>%
-    mutate(project_county_name = str_to_title(project_county_name))
-
-Montana <- Montana %>%
-  distinct() %>%
-  unique() %>%
-  mutate(zip = str_sub(zip, 1, 5))
-```
+## Initial Exploration
 
 **Q1.**. Write R code that generates some basic descriptive statistics that allows you to describe the applications from your state. This code should produce results that describe the data in different ways: how many applications there are, along with ways to understand the typical and most frequent values for columns you find interesting or newsworthy. You should produce at least five (5) descriptive statistics and write up a summary of the data using them.
 
+## 1a - load data
+
 ```{r}
-Montana_counties <- Montana %>% 
-  group_by(project_county_name) %>% 
-  summarise(total=n(), total_loans=n(), total_loan_amounts = sum(amount)) %>%  
-  arrange(desc(total))
+Montana <- read_csv("montana_ppp.csv")
 ```
 
+## 1b - clean data & re-export for openrefine
+
 ```{r}
-Montana_cities <- Montana %>% 
-  mutate(project_city = str_to_title(project_city))%>% 
-  group_by(project_city) %>%
-  summarise(total=n()) %>% 
-  arrange(desc(total))
+Montana <- Montana %>% 
+  mutate(
+    city = str_to_upper(city)
+  )
+write_csv(mt_ppp,"montana2.csv")
 ```
 
+## 1c - reimport
+
 ```{r}
-lender_city <- Montana %>% 
-  group_by(originating_lender_city) %>% 
-  summarise(total=n()) %>% 
-  arrange(desc(total))
+Montana_clean <- read_csv("montana2.csv") %>% 
+  mutate(zip = str_sub(zip, start=1L, end=5L))
+```
 
-retained <- Montana %>% 
-    group_by(project_county_name) %>% 
-  summarise(total_loans=n(), total_jobs = sum(jobs_retained))%>% 
-  arrange(desc(total_jobs))
+## 1c - number of applications
 
-zip_loan <- Montana %>%
-   drop_na(zip) %>%
-   group_by(zip) %>%
-   summarise(total=n()) %>% 
-  arrange(desc(total))
-``` 
+```{r}
+nrow(Montana)
+```
 
-A1: 
+## 1d - apps by city
+
+```{r}
+mt_by_city <- Montana_clean %>% 
+  group_by(city) %>% 
+  summarise(count=n()) %>% 
+  arrange(desc(count))
+```
+
+## 1e - % undisbursed
+
+```{r}
+mt_undis <- Montana_clean %>% 
+  filter(undisbursed_amount > 0)
+(nrow(mt_undis)/nrow(mt_ppp_clean)) * 100
+```
+
+## 1f - % without full forgiveness
+
+```{r}
+mt_unfor <- Montana_clean %>% 
+  filter(forgiveness_amount < amount)
+(nrow(mt_unfor)/nrow(mt_ppp_clean)) * 100
+```
+
+## 1g - jobs_retained - mean, median, max
+
+```{r}
+# mean
+mean(Montana_clean$jobs_retained)
+# median
+median(Montana_clean$jobs_retained)
+# max
+max(Montana_clean$jobs_retained)
+```
+
+## 1h - amount - mean, median, min, max
+
+```{r}
+# mean
+mean(Montana_clean$amount)
+#median
+median(Montana_clean$amount)
+#min
+min(Montana_clean$amount)
+#max
+max(Montana_clean$amount)
+```
+
+
+**A1.** 
+There were 47,066 PPP applications in Montana. The cities of Billings, Missoula and Bozeman had the most loans by far (4803, 4437 and 4303, respectively). Helena, with the fourth most (2151), had less than 50% of the loans than these top three cities. Amazingly, zero businesses have undisbursed PPP loans. 6% of businesses in Montana that received PPP loans have to pay some amount of that loan back. The average number of jobs retained was 6.9, but the median was only two, which suggests there are some big companies that skew the average higher - a few companies that saved 500 jobs are likely the culprits. The maximum loan amount was 10 million, while the minimum was... 68. Which is just insane.
+
 ## Geographic Analysis
 
-**Q2.** Write R code that examines geographic patterns for PPP loans in your state, using Census population information to calculate a per-capita figure for the state and counties and zip codes. Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure. Describe the most interesting or newsworthy findings based on your exploration. LAB 11 ZIP CODES Lab 8
+**Q2.** Write R code that examines geographic patterns for PPP loans in your state, using Census population information to calculate a per-capita figure for the state and counties and zip codes. 
 
-
+## 2a - get census
 
 ```{r}
 load_variables(2019, "acs1")
-MT_pop <- get_acs(geography = "state", 
-                  variables = "B01001_001", 
-                  year = 2019, 
-                  geometry = TRUE) %>% 
+mt_pop <- get_acs(geography = "state", variables = "B01001_001", year = 2019, geometry = TRUE) %>% 
   filter(NAME == "Montana")
-
-county_pop <- get_acs(geography = "county", 
-                      variables = "B01001_001", 
-                      year = 2019, 
-                      geometry = TRUE) %>% 
+county_pop <- get_acs(geography = "county", variables = "B01001_001", year = 2019, geometry = TRUE) %>% 
   filter(str_detect(NAME, ", Montana"))
-
-zip_pop <- get_acs(geography = "zcta", 
-                   variables = "B01001_001", 
-                   year = 2019, 
-                   geometry = TRUE) %>% 
+zip_pop <- get_acs(geography = "zcta", variables = "B01001_001", year = 2019, geometry = TRUE) %>% 
   filter(GEOID >= 59001 & GEOID <= 59937)
 ```
 
-
+## 2b - total loans per cap
 
 ```{r}
-MT_loans_per_capita <- Montana %>% 
+mt_loans_per_cap <- Montana %>% 
   summarise(count=n()) %>% 
-  mutate(per_capita = count/MT_pop$estimate)
+  mutate(per_capita = count/mt_pop$estimate)
 ```
 
-
+## 2c - clean census tables
 
 ```{r}
-county_poppier <- county_pop %>% 
+county_pop_clean <- county_pop %>% 
   mutate(
     NAME = str_replace(NAME," County, Montana",""),
     NAME = str_to_upper(NAME)
@@ -120,8 +154,7 @@ county_poppier <- county_pop %>%
     population = estimate
   ) %>% 
   select(project_county_name,population,geometry)
-
-zip_poppier <- zip_pop %>% 
+zip_pop_clean <- zip_pop %>% 
   rename(
     population = estimate,
     zip = GEOID
@@ -129,70 +162,69 @@ zip_poppier <- zip_pop %>%
   select(zip,population,geometry)
 ```
 
-
+## 2d - join
 
 ```{r}
-county_ppp <- Montana %>% 
+ppp_by_cou <- Montana_clean %>% 
   group_by(project_county_name) %>% 
-  summarise(count=n()) 
-  left_join(county_poppier, by = "project_county_name")
-
-zip_ppp <- Montana %>% 
+  summarise(count=n()) %>% 
+  left_join(county_pop_clean, by = "project_county_name")
+ppp_by_zip <- Montana_clean %>% 
   group_by(zip) %>% 
   summarise(count=n()) %>% 
-  left_join(zip_poppier, by = "zip")
+  left_join(zip_pop_clean, by = "zip")
 ```
 
-
+## 2e - per capita
 
 ```{r}
-county_per_capita <- county_ppp %>% 
+cou_per_cap <- ppp_by_cou %>% 
   mutate(loans_per_capita = count/population) %>% 
   arrange(desc(loans_per_capita))
-
-zip_per_capita <- zip_ppp %>% 
+zip_per_cap <- ppp_by_zip %>% 
   mutate(
     loans_per_capita = count/population,
-    per_cap_diff = MT_loans_per_capita$per_capita - loans_per_capita
+    per_cap_diff = mt_loans_per_cap$per_capita - loans_per_capita
   ) %>% 
   arrange(desc(per_cap_diff))
-
-MT_per_capita <- MT_pop %>% 
+mt_per_cap <- mt_pop %>% 
   select(NAME,estimate) %>% 
   mutate(
-    loans = nrow(Montana),
+    loans = nrow(Montana_clean),
     loans_per_cap = loans/estimate
   )
 ```
 
 Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure.
 
-
+## 2f - Tigris map
 
 ```{r}
 counties <- counties()
-MT_counties <- counties %>% 
+mt_counties <- counties %>% 
   filter(STATEFP == "30")
-MT_counties %>% 
+mt_counties %>% 
   ggplot() +
   geom_sf() +
   theme_minimal()
 ```
 
+## 2g - county map
+
 ```{r}
 ggplot() +
-  geom_sf(data=MT_counties, fill="white") +
-  geom_sf(data=county_per_capita, aes(fill=loans_per_capita,geometry=geometry)) +
+  geom_sf(data=mt_counties, fill="white") +
+  geom_sf(data=cou_per_cap, aes(fill=loans_per_capita,geometry=geometry)) +
   scale_fill_gradient(low="blue",high="yellow") +
   theme_minimal()
 ```
 
-
+## 2h - zip map
 
 ```{r}
 ggplot() +
-  geom_sf(data=MT_counties, fill="white") +
-  geom_sf(data=zip_per_capita, aes(fill=per_cap_diff,geometry=geometry)) +
+  geom_sf(data=mt_counties, fill="white") +
+  geom_sf(data=zip_per_cap, aes(fill=per_cap_diff,geometry=geometry)) +
   scale_fill_distiller(type = "div", palette = 1, direction = 1, aesthetics = "fill") +
   theme_minimal() +
   labs(
@@ -204,8 +236,238 @@ ggplot() +
 Describe the most interesting or newsworthy findings based on your exploration.
 
 **A2.** 
+There seem to be a few ZIP codes that had extremely high loans per capita: 59062, 59244, 59424 and 59256 chief among them. These zip codes all have phenomenally low populations - in the case of 59062 in Otter, the loans per capita is actually 1. These are all zip codes in the middle of nowhere, quite far from major (for Montana) metro areas like Bozeman or Missoula.
+
+```{r}
+middle_of_nowhere <- Montana_clean %>% 
+  filter(zip == 59062 | zip == 59244 | zip == 59424 | zip == 59256) %>% 
+  group_by(address) %>% 
+  summarise(count=n(), sum=sum(amount)) %>% 
+  arrange(desc(sum))
+```
+
+On further examination, these organizations are mostly farming and agriculture enterprises, and mostly sole proprietorships or self-employed individuals. Most were small-dollar loans, as well. I think this could make for an interesting story - we often think of the Montanan yeoman farmer as distrustful of the government, yet there are several individuals at the same address taking multiple handouts from the feds to the tune of 60,000 dollars or more. My next reporting step would be to drill down by zip codes with less than 100 people and examine those loans more closely.
+
+
+## Lender Analysis
+
+**Q3.** Write R code to examine which lenders had the most approved applications in your state (and include summary statistics such as total amount and average loan amount). Generate dataframes that show the number and total amount of all loans and undisbursed loans per lender. For those lenders who had any undisbursed loans, make a graphic showing the relationship between the total amount of loans and the total undisbursed amount. Describe the most noticeable outlier lenders on that graphic below. 
+
+#All loans disbursed. Way to go Montana!##
+
+If there are no undisbursed loans, make graphic showing the relationship between lenders and loan amounts showing how many loans each lender issued for each amount in the dataframe. Describe the most noticeable outlier lenders on that graphic.
+
+## 3a - group_by lender
+
+```{r}
+Take_me_to_your_lender <- Montana_clean %>% 
+  mutate(
+    amount_groups = case_when(
+      amount < 50000 ~ "sub50k",
+      amount >= 50000 & amount < 250000 ~ "50k_to_250k",
+      amount >= 250000 ~ "250kplus"
+    )
+  ) %>% 
+  group_by(servicing_lender_name,amount_groups) %>% 
+  summarise(
+    count=n()
+  ) %>%
+  arrange(servicing_lender_name)
+```
+
+## 3b - graphic
+
+```{r}
+Take_me_to_your_lender %>% 
+  ggplot(aes(x=amount_groups,y=count,label=servicing_lender_name)) +
+  geom_point() +
+  geom_text(aes(label=ifelse(count>1000,as.character(servicing_lender_name),'')),hjust=-0.05,vjust=0)
+```
+
+## 3c - out-of-state lenders only
+
+```{r}
+offshore_bank_accounts <- Montana_clean %>% 
+  filter(servicing_lender_state != "MT") %>% 
+  mutate(
+    amount_groups = case_when(
+      amount < 50000 ~ "under 50k",
+      amount >= 50000 & amount < 250000 ~ "50k - 250k",
+      amount >= 250000 ~ "250k and over"
+    )
+  ) %>% 
+  group_by(servicing_lender_name,amount_groups) %>% 
+  summarise(
+    count=n()
+  ) %>%
+  arrange(servicing_lender_name)
+```
+
+```{r}
+offshore_bank_accounts %>% 
+  ggplot(aes(x=amount_groups,y=count,label=servicing_lender_name)) +
+  geom_point() +
+  geom_text(aes(label=ifelse(count>100,as.character(servicing_lender_name),'')),hjust=-0.05,vjust=0)
+```
 
 
 
+**A3.** 
+It looks like three banks - Glacier Bank, First Interstate Bank and Stockman Bank of Montana - were the most popular lenders in all three of the buckets I used. I tried filtering by out-of-state to find suspicious activity, but it still looks pretty above-board. The most small loans issued by an out-of-state lender was U.S. Bank, National, with just under 800, compared to the whopping 7500+ issued by Glacier Bank. I would probably spend more time looking for outlier banks - i.e. banks that had very few small-dollar loans, but a disproportionate number of loans for 250k and over. There doesn't seem to be anything indicating this pattern in the data I have. Most of the banks follow the same curve across the scatterplot.
 
+## Industry Analysis
 
+**Q4.** Write R code that examines industry patterns for PPP loans in your state, using the NAICS codes from the PPP data as a starting point. Generate statewide and county industry totals, then join that with 2018-19 data from the [Census County Business Patterns survey](https://www2.census.gov/programs-surveys/cbp/datasets/2019/cbp19co.zip) using 6-digit NAICS codes. The documentation explaining that data can be found here: https://www2.census.gov/programs-surveys/cbp/technical-documentation/records-layouts/2018_record_layouts/county-layout-2018.txt. 
+
+To do this, you will need to add FIPS codes to your PPP dataset.
+
+## 4a - read CCBP survey & naics key
+
+```{r}
+naics_survey <- read_csv("data/cbp19co.csv") %>% 
+  filter(
+    fipstate == 30 &
+    !str_detect(naics, "-") &
+    !str_detect(naics, "/")
+  ) %>% 
+  mutate(
+    fips5 = str_c(fipstate,fipscty),
+    naics = as.numeric(naics)     
+  ) %>% 
+  select(fips5,naics,est)
+naics_key <- read_csv("data/naics_codes.csv") %>% 
+  rename(naics = naics_code)
+naics_survey_names <- naics_survey %>% 
+  left_join(naics_key, by = "naics")
+```
+
+## 4b - get FIPS codes & joining
+
+```{r}
+all_fips <- fips_codes %>% as_tibble()
+mt_fips <- all_fips %>% filter(state == 'MT') %>% 
+  mutate(
+    county = str_replace(county, ' County', ''),
+    project_county_name = str_to_upper(county),
+    fips5 = str_c(state_code,county_code)
+  ) %>% 
+  select(project_county_name,fips5)
+mt_ppp_fips <- mt_ppp_clean %>% 
+  left_join(mt_fips, by = "project_county_name") %>% 
+  rename(naics = naics_code)
+```
+
+## 4c - statewide NAICS vs CBP
+
+```{r}
+mt_naics <- mt_ppp_fips %>% 
+  group_by(naics) %>% 
+  summarise(
+    count=n()
+  ) %>% 
+  arrange(desc(count)) %>% 
+  head(10)
+statewide_cbp <- naics_survey_names %>% 
+  group_by(naics,title) %>% 
+  summarise(total = sum(est)) %>% 
+  arrange(desc(total))
+mt_ppp_v_cbp <- mt_naics %>% 
+  left_join(statewide_cbp, by = 'naics')%>% 
+  mutate(
+    diff = total - count
+  )
+```
+
+## 4d - statewide NAICS vs CBP - no single proprietorships or self-employed
+
+```{r}
+mt_naics_no_sp <- mt_ppp_fips %>% 
+  filter(
+    business_type != "Sole Proprietorship" &
+      business_type != "Self-Employed Individuals"
+  ) %>% 
+  group_by(naics) %>% 
+  summarise(
+    count=n()
+  ) %>% 
+  arrange(desc(count)) %>% 
+  head(10)
+mt_ppp_v_cbp_no_sp <- mt_naics_no_sp %>% 
+  left_join(statewide_cbp, by = 'naics') %>% 
+  mutate(
+    diff = total - count
+  )
+```
+
+## 4e - county totals for hotels, motels, holiday inns
+
+```{r}
+mt_hotels <- mt_ppp_fips %>% 
+  filter(
+    naics == 721110 &
+      business_type != "Sole Proprietorship" &
+      business_type != "Self-Employed Individuals"
+  ) %>% 
+  group_by(project_county_name,fips5,naics) %>% 
+  summarise(count=n()) %>% 
+  arrange(desc(count))
+naics_survey_hotels <- naics_survey %>% 
+  filter(naics == 721110)
+mt_hotels_vs_cbp <- mt_hotels %>% 
+  left_join(naics_survey_hotels, by = "fips5") %>% 
+  mutate(
+    est = case_when(
+      is.na(est) ~ 0,
+      TRUE ~ est
+    ),
+    diff = count - est
+  )
+write_csv(mt_hotels_vs_cbp, "data/mt_hotels_vs_cbp.csv")
+```
+
+Does the distribution of PPP applications by the top 10 industries (by number of applications) roughly match the number of businesses reported in the Census data? Does it roughly match if you remove self-employed individuals and sole proprietorships from the PPP totals? Write up a summary of what you've found and whether there are potentially newsworthy patterns in the data.
+
+Create a county-level map showing the differences between the PPP applications and the Census business data for one of the top 10 industry codes. You can do this either using ggplot or Datawrapper (if the latter, publish that map and include the URL below).
+
+**A4.** 
+
+The biggest problem with Montana and the NAICS survey is that, per the Census website, the CBP "covers most NAICS industries *excluding crop and animal production*" - "Beef Cattle Ranching and Farming" and "Wheat Production" are Montana's two biggest industries.
+
+With this in mind, we are left to examine the remaining top 8 industries. Even when we remove sole proprietorships and the self-employed from our PPP data, there were a good deal more loans distributed than the CBP estimated businesses to exist in half of the top industries in Montana. Without sole proprietorships removed, only lawyers' offices number line up with the number reported by the CBP.
+
+I decided to focus in on hotels and motels for my map, seen here [https://datawrapper.dwcdn.net/5IFe5/1/], because, once single-person operations were removed, they had the biggest discrepancy between loans received and establishments catalogued by the census bureau. I think this is the most newsworthy finding I've seen in the entirety of this project, so I will elaborate further below for question 5. 
+
+## Summary
+
+**Q5.** What is the most promising story idea that you have found during this exploration? How would you approach reporting it out and what other information/data would you need to do that? What would be the minimum story you could get from this, and what would be the maximum story?
+
+**A5.**
+As I said above, the discrepancy between CBP and PPP data regarding hotels and motels is the most interesting facet of this data to me. I see only a few possible explanations for this circumstance:
+
+  a) 200+ hotels opened across Montana, mostly in Gallatin and Yellowstone counties, between 2019 and 2021;
+  b) The census is doing an exceptionally poor job of cataloguing businesses, or;
+  c) There's a good deal of undiscovered fraud in the PPP data.
+  
+In order to determine which of these three explanations is the most viable, additional reporting must be undertaken. I would want to interview a spokesperson from the Census Bureau, and see if they have been made aware of this type of discrepancy already, and any possible explanations they have for it.
+
+Tourism data collected by Montana's tourism department would be another useful tool. If there was exponential growth of visitors to Montana in the years leading up to 2019, a hotel building boom may be indicated. Perhaps we can get more context from the PPP data itself:
+
+```{r}
+mt_further_inv <- mt_ppp_clean %>% 
+  filter(
+    naics_code == 721110
+  ) %>% 
+  filter(
+    project_county_name == "GALLATIN" |
+    project_county_name == "YELLOWSTONE" |
+    project_county_name == "MISSOULA" |
+    project_county_name == "FLATHEAD"
+  ) %>% 
+  group_by(name) %>% 
+  summarise(
+    total_dollars = sum(amount),
+    total_jobs = sum(jobs_retained)
+  )
+```
+
+Already, we can see massive loans going to a select few hoteliers, and many of these recipients receiving two separate loans. Why were they allowed to double dip? Was this an oversight on the part of the government and lenders, or was this a concerted effort of fraud? At a minimum, this would be a story about an administrative hiccup that led to extra money for the hospitality industry, or perhaps a few instances of out-and-out fraud. But there's a possibility this would uncover absurd incompetence on the part of the Census Bureau, PPP lenders, the SBA, or a combiantion of the three.
