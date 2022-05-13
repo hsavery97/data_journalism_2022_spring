@@ -324,7 +324,7 @@ To do this, you will need to add FIPS codes to your PPP dataset.
 ## 4a - read CCBP survey & naics key
 
 ```{r}
-naics_survey <- read_csv("data/cbp19co.csv") %>% 
+naics_survey <- read_csv("cbp19co.csv") %>% 
   filter(
     fipstate == 30 &
     !str_detect(naics, "-") &
@@ -335,7 +335,7 @@ naics_survey <- read_csv("data/cbp19co.csv") %>%
     naics = as.numeric(naics)     
   ) %>% 
   select(fips5,naics,est)
-naics_key <- read_csv("data/naics_codes.csv") %>% 
+naics_key <- read_csv("naics_codes.csv") %>% 
   rename(naics = naics_code)
 naics_survey_names <- naics_survey %>% 
   left_join(naics_key, by = "naics")
